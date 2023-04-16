@@ -17,11 +17,10 @@ First loaded dataset using R and performed pre-processing steps.
 
 Then experimented with Machine Learning Algorithms.
 * Dataset is splitted into train and test data and models got trained on train data and evaluated on test data.
+* Fitted Logistic Regression Model.
+* To deal with multicollinearity, applied Ridge and Lasso technique.
+* Used Decision tree and Random Forest Algorithm.
+* Applied Artificial Neural Network, to build a model.
+* Finall compared all models on the basis of accuracy.
 
-b)Fitted Logistic Regression Model.
-c)To deal with multicollinearity, applied Ridge and Lasso technique.
-d)Used Decision tree and Random Forest Algorithm.
-e)Applied Artificial Neural Network, to build a model.
-f)Finall compared all models on the basis of accuracy.
-
-So, now we can detect the phishing and legitimate URL.
+So, now we can detect the phishing and legitimate URL by using the developed machine learning tools.
