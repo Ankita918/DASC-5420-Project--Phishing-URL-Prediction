@@ -1,0 +1,312 @@
+---
+title: "TML_Final_Project"
+author: "Ankita Shelke-T00711011"
+date: "2023-04-14"
+output:
+  html_document:
+    theme: yeti
+    toc: yes
+    toc_float: yes
+    highlight: textmate
+    toc_depth: 5
+  word_document:
+    toc: yes
+    toc_depth: '5'
+  pdf_document:
+    toc: yes
+    toc_depth: '5'
+---
+# **DASC 5420: Final Project**
+
+## <span style="color: red;"> Data Preprocessing </span>
+
+```{r }
+knitr::opts_chunk$set(echo = TRUE)
+library(mlbench)
+library(glmnet)
+library(dplyr)
+library(caret)
+library(pls)
+library(mlbench)
+library(glmnet)
+library(dplyr)
+library(caret)
+
+phis_data=read.csv("Phishing_Legitimate_full.csv",header=T)
+str(phis_data)
+table(phis_data$phishing)
+dim(phis_data)
+head(phis_data)
+tail(phis_data)
+
+#**In this dataset Class_Label is the response variable, I have changed it's name
+#to phishing**
+
+#Data Cleaning
+#Check for NA values in the dataframe
+sapply(phis_data, function(x) sum(is.na(x)))
+
+# Set a seed
+set.seed(500)
+
+# Random splitting of the data 
+index <- sample(1:nrow(phis_data),round(0.75*nrow(phis_data)))
+train <- phis_data[index,]
+test <- phis_data[-index,]
+
+```
+
+```{r }
+#Visualization of phishing attribute
+
+ggplot(phis_data, aes(x = phishing)) +
+  geom_bar(fill = "blue")  +
+  xlab(" ")+
+  ylab("Count ") +
+  ggtitle("Total Phishing and Legitimate Website Count")+
+  theme(axis.title.x = element_text(colour="red",size=12),
+        axis.title.y = element_text(colour="red",size=12),
+        axis.text.x = element_text(size = 10),
+        axis.text.y = element_text(size = 10),
+        plot.title = element_text(colour="Dark Blue",
+                                  size=15),
+        panel.background=element_rect(colour="black")
+        )
+
+
+```
+
+## <span style="color: red;"> Logistic Regression </span>
+
+```{r }
+
+# Fitting Logistic Regression Model
+lr.fit <- glm(phishing~.,family = "binomial", data=train)
+summary(lr.fit)
+
+# Make predictions
+probabilities <- lr.fit %>% predict(test, type = "response")
+
+# Model accuracy
+predicted.classes <- ifelse(probabilities > 0.5, 1, 0)
+observed.classes <- test$phishing
+mean(predicted.classes == observed.classes)
+
+#Confusion Matrix
+confusionMatrix(as.factor(predicted.classes),as.factor(observed.classes))
+```
+
+## <span style="color: red;"> Lasso Regression </span>
+
+```{r }
+#---------------------------- Lasso---------------------------------------------
+library(glmnet)
+
+phis_data=read.csv("Phishing_Legitimate_full.csv",header=T)
+# Create the matrix of predictors for glmnet function
+x <- model.matrix(phishing~., train)[,-1]#Return data without intercept
+
+# response variable
+y <- train$phishing
+
+lasso <- glmnet(x, y, alpha = 1, lambda = NULL)
+
+
+# Find the optimal lambda that minimizes the 10-fold cross-validation error:
+set.seed(500)
+cv.lasso <- cv.glmnet(x, y, alpha = 1, family = "binomial", lambda = NULL)
+plot(cv.lasso)
+print(paste("Minimum lambda for lasso ",cv.lasso$lambda.min))
+
+# Fit the final model on the training data using optimal lambda
+model_lasso <- glmnet(x, y, alpha = 1, family = "binomial",
+                lambda = cv.lasso$lambda.min)
+
+# Display coefficients
+coef(model_lasso)
+
+# Plot the coefficients
+plot(lasso, xvar = "lambda", label=T)
+abline(v=cv.lasso$lambda.min, col = "red", lty=2)
+abline(v=cv.lasso$lambda.1se, col="blue", lty=2)
+
+## Make predictions on the test data
+x.test <- model.matrix(phishing ~., test)[,-1]
+pr.lasso <- model_lasso %>% predict(newx = x.test)
+
+# Model accuracy
+predicted.classes <- ifelse(pr.lasso > 0.5, 1, 0)
+observed.classes <- test$phishing
+mean(predicted.classes == observed.classes)
+
+#Confusion Matrix
+confusionMatrix(as.factor(predicted.classes),as.factor(observed.classes))
+```
+
+
+## <span style="color: red;"> Ridge Regression </span>
+
+```{r }
+#---------------------------- Ridge---------------------------------------------
+
+# Create the matrix of predictors for glmnet function
+x <- model.matrix(phishing~., train)[,-1]#Return data without intercept
+
+# response variable
+y <- ((train[,ncol(phis_data)]))
+
+ridge <- glmnet(x, y, alpha = 0, lambda = NULL)
+
+# Find the optimal lambda that minimizes the 10-fold cross-validation error:
+set.seed(500)
+cv.ridge <- cv.glmnet(x, y, alpha = 0, family = "binomial", lambda = NULL)
+plot(cv.ridge)
+print(paste("Minimum lambda for ridge ",cv.ridge$lambda.min))
+
+# Fit the final model on the training data using optimal lambda
+model_ridge <- glmnet(x, y, alpha = 0, family = "binomial",
+                lambda = cv.ridge$lambda.min)
+# Display regression coefficients
+coef(model_ridge)
+
+# Plot the coefficients
+plot(ridge, xvar = "lambda", label=T)
+abline(v=cv.ridge$lambda.min, col = "red", lty=2)
+abline(v=cv.ridge$lambda.1se, col="blue", lty=2)
+
+# Make predictions on the test data
+x.test <- model.matrix(phishing ~., test)[,-1]
+pr.ridge <- model_ridge %>% predict(newx = x.test)
+
+# Model accuracy
+predicted.classes <- ifelse(pr.ridge > 0.5, 1, 0)
+observed.classes <- test$phishing
+mean(predicted.classes == observed.classes)
+
+#Confusion Matrix
+confusionMatrix(as.factor(predicted.classes),as.factor(observed.classes))
+```
+
+## <span style="color: red;"> Neural Network </span>
+
+```{r }
+#----------------------------Neural Network-------------------------------------
+library(neuralnet)
+library(caret)
+library(dyplyr)
+
+# Load the necessary packages
+phis_data=read.csv("Phishing_Legitimate_full.csv",header=T)
+a=nrow(phis_data)
+b=a-499
+
+#For computational purpose I am using 1000 observations from the big dataset 
+#having 10,000 observations(Phishing_legitimate_full.csv)
+#I tried to use data greater than 1000 observations, but Rstudio got stuck
+# This new dataset has 50% legitimate and 50% phishing url information
+new_phis_data=rbind(phis_data[1:500,],phis_data[b:a,])
+table(new_phis_data$phishing)
+#View(new_phis_data)
+
+set.seed(500)
+train_idx <- sample(nrow(new_phis_data), nrow(new_phis_data) * 0.8)
+train <- new_phis_data[train_idx, ]
+test <- new_phis_data[-train_idx, ]
+dim(test)
+
+train$phishing=as.factor(train$phishing)
+NN=neuralnet(phishing~.,train,hidden = c(5,3))
+plot(NN)
+
+# Predict
+pr.nn <- neuralnet::compute(NN,test[,1:48])
+pr.nn_ <- pr.nn$net.result
+
+pred2 <- data.frame()
+
+for(i in 1:200)
+{
+  pred2 <- rbind(pred2, which.max(pr.nn_[i,]))
+}
+
+pred2$X1L <- gsub(1,"0",pred2$X1L )
+pred2$X1L <- gsub(2,"1",pred2$X1L )
+
+prediction = as.factor(pred2$X1L)
+reference = as.factor(test$phishing)
+
+confusionMatrix(prediction,reference)
+```
+
+
+## <span style="color: red;"> Decision Tree </span>
+
+```{r }
+#----------------------------Decision Tree--------------------------------------
+library(randomForest)
+library(tree) 
+library(dplyr)
+#install.packages("tree")
+
+# Split the data
+set.seed(500)
+train = sample(1:nrow(phis_data), nrow(phis_data)/2)
+
+# Fit decision tree
+tree.phis=tree(phishing~.,phis_data,subset=train)
+summary(tree.phis)
+
+# plot the tree.
+plot(tree.phis, col="green")
+text(tree.phis,pretty=0)
+
+# check whether pruning the tree will improve performance or not
+cv.phis=cv.tree(tree.phis)
+plot(cv.phis$size,cv.phis$dev,type='b')
+
+prune.phis=prune.tree(tree.phis,best=5) #prune the tree
+plot(prune.phis, col="green")
+text(prune.phis,pretty=0)
+
+# Make predictions on the test data
+pr.dt <-  predict(tree.phis,phis_data[-train,])
+
+# Model accuracy
+predicted.classes <- ifelse(pr.dt > 0.5, 1, 0)
+observed.classes <- phis_data[-train,"phishing"]
+mean(predicted.classes == observed.classes)
+
+table (predicted.classes , observed.classes)
+```
+
+## <span style="color: red;"> Random Forest </span>
+
+```{r }
+#----------------------------Random Forest--------------------------------------
+library(randomForest)
+library(caret)
+
+phis_data=read.csv("Phishing_Legitimate_full.csv",header=T)
+set.seed(500)
+index <- sample(1:nrow(phis_data),round(0.75*nrow(phis_data)))
+train <- phis_data[index,]
+test <- phis_data[-index,]
+train$phishing=as.factor(train$phishing)
+rf <- randomForest(phishing~., data=train )  
+print(rf)
+
+# Make predictions on the test data
+pr.rf <-  predict(rf,test)
+
+test$phishing=as.factor(test$phishing)
+
+# Model accuracy
+confusionMatrix(pr.rf,test$phishing)
+
+#Error rate
+plot(rf,main="Random Forest")
+
+# plots of these importance measures
+varImpPlot(rf, sort=T, n.var=10, main="Top 10 -Variable Importance",col="blue")
+```
+
