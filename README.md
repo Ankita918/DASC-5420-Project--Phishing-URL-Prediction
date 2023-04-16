@@ -17,6 +17,7 @@ First loaded dataset using R and performed pre-processing steps.
 
 Then experimented with Machine Learning Algorithms.
 a) Dataset is splitted into train and test data and models got trained on train data and evaluated on test data.
+
 b)Fitted Logistic Regression Model.
 c)To deal with multicollinearity, applied Ridge and Lasso technique.
 d)Used Decision tree and Random Forest Algorithm.
