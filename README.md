@@ -21,6 +21,6 @@ Then experimented with Machine Learning Algorithms.
 * To deal with multicollinearity, applied Ridge and Lasso technique.
 * Used Decision tree and Random Forest Algorithm.
 * Applied Artificial Neural Network, to build a model.
-* Finall compared all models on the basis of accuracy.
+* Finally compared all models on the basis of accuracy.
 
 So, now we can detect the phishing and legitimate URL by using the developed machine learning tools.
